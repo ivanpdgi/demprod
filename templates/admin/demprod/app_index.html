@@ -1,0 +1,6 @@
+{% extends "admin/app_index.html" %}
+{% block sidebar %}
+<a href="{% url 'demprod:export_products' %}" class="btn">Export Products as CSV</a>
+<a href="{% url 'demprod:export_products' %}" class="btn">Import Products as CSV</a>
+<a href="{% url 'demprod:export_products' %}" class="btn">Add Products as CSV</a>
+{% endblock %}
