@@ -9,7 +9,6 @@ import json
 class PropValid(models.Model):
     """Validate Properties"""
     properties = models.TextField(blank=True)
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
     def clean(self):
         # validate JSON description
@@ -19,6 +18,8 @@ class PropValid(models.Model):
                 obj = json.loads(self.properties)
             except ValueError:
                 raise ValidationError('property field myst be valid JSON or null or empty string.')
+    class Meta:
+         abstract = True
 
     @property
     def oproperties(self):
@@ -36,6 +37,7 @@ class PropValid(models.Model):
 
 
 class Product(PropValid):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     article = models.CharField(blank=False, unique=True, max_length=50)
     shortname = models.CharField(blank=False, max_length=100)
     name = models.CharField(blank=True, max_length=500)
@@ -66,6 +68,7 @@ class Picture(models.Model):
 
 
 class Category(PropValid):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     parent = models.ForeignKey('self', blank=True, null=True)
     shortname = models.CharField(blank=False, unique=True, max_length=100)
     name = models.CharField(blank=True, max_length=500)
@@ -92,6 +95,13 @@ STATE_CHOICES = ((0, 'New'),
                  (-1, 'Broken')
                  )
 
+def increment_basket_num():
+    """Предполагается, что корзины не будут удаляться"""
+    last_basket = Basket.objects.all().order_by('num').last()
+    if not last_basket:
+        return 0
+    return last_basket.num
+
 
 class Basket(PropValid):
     """
@@ -102,9 +112,12 @@ class Basket(PropValid):
            -1: Broken
     """
     #num = models.AutoField(editable=False)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    num = models.IntegerField(default=increment_basket_num, editable=False)
     user_id = models.UUIDField(default=uuid.uuid4)
-    user_name = models.CharField(blank=False, max_length=200)
-    user_phone = models.CharField(blank=False, max_length=20)
+    # Пока пользователь не заполнит мы не знаем этих данных
+    user_name = models.CharField(blank=True, max_length=200)
+    user_phone = models.CharField(blank=True, max_length=20)
     user_email = models.EmailField(blank=True)
     created = models.DateTimeField(editable=False, auto_now_add=True)
     posted = models.DateTimeField(editable=False, auto_now_add=True)
@@ -116,6 +129,7 @@ class Basket(PropValid):
 
 
 class BasketItem(PropValid):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     article = models.CharField(blank=False, unique=True, max_length=50)
     shortname = models.CharField(blank=False, max_length=100)
     cnt = models.DecimalField(blank=False, max_digits=18, decimal_places=2)
@@ -123,6 +137,10 @@ class BasketItem(PropValid):
     created = models.DateTimeField(auto_now_add=True)
     modified = models.DateTimeField(auto_now=True)
     basket_ref = models.ForeignKey(Basket, on_delete=models.CASCADE)
+
+    @property
+    def sum(self):
+        return self.cnt * self.price
 
     class Meta:
         ordering = ('article', 'cnt',)
